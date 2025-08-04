@@ -1,9 +1,27 @@
 
-import { type AppUsage } from '../schema';
+import { db } from '../db';
+import { appUsageTable } from '../db/schema';
+import { type GetAppUsageInput, type AppUsage } from '../schema';
+import { eq, and, gte, lte } from 'drizzle-orm';
 
-export const getAppUsage = async (deviceId: number, startDate: Date, endDate: Date): Promise<AppUsage[]> => {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching app usage statistics for monitoring
-  // child's application usage patterns.
-  return Promise.resolve([]);
+export const getAppUsage = async (input: GetAppUsageInput): Promise<AppUsage[]> => {
+  try {
+    // Query app usage records within the date range for the specified device
+    const results = await db.select()
+      .from(appUsageTable)
+      .where(
+        and(
+          eq(appUsageTable.device_id, input.deviceId),
+          gte(appUsageTable.start_time, input.startDate),
+          lte(appUsageTable.start_time, input.endDate)
+        )
+      )
+      .execute();
+
+    // Return results - no numeric conversions needed as all fields are integers or dates
+    return results;
+  } catch (error) {
+    console.error('Get app usage failed:', error);
+    throw error;
+  }
 };

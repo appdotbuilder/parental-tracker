@@ -1,17 +1,38 @@
 
+import { db } from '../db';
+import { screenTimeLimitsTable, devicesTable } from '../db/schema';
 import { type CreateScreenTimeLimitInput, type ScreenTimeLimit } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export const setScreenTimeLimit = async (input: CreateScreenTimeLimitInput): Promise<ScreenTimeLimit> => {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is setting daily screen time limits and app-specific
-  // time restrictions for child devices.
-  return Promise.resolve({
-    id: 1,
-    device_id: input.device_id,
-    daily_limit: input.daily_limit,
-    app_specific_limits: input.app_specific_limits || null,
-    is_active: true,
-    created_at: new Date(),
-    updated_at: new Date()
-  } as ScreenTimeLimit);
+  try {
+    // Verify device exists
+    const device = await db.select()
+      .from(devicesTable)
+      .where(eq(devicesTable.id, input.device_id))
+      .execute();
+
+    if (device.length === 0) {
+      throw new Error(`Device with id ${input.device_id} not found`);
+    }
+
+    // Insert screen time limit record
+    const result = await db.insert(screenTimeLimitsTable)
+      .values({
+        device_id: input.device_id,
+        daily_limit: input.daily_limit,
+        app_specific_limits: input.app_specific_limits || null
+      })
+      .returning()
+      .execute();
+
+    const screenTimeLimit = result[0];
+    return {
+      ...screenTimeLimit,
+      app_specific_limits: screenTimeLimit.app_specific_limits as Record<string, number> | null
+    };
+  } catch (error) {
+    console.error('Screen time limit creation failed:', error);
+    throw error;
+  }
 };

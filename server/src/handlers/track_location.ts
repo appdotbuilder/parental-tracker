@@ -1,18 +1,33 @@
 
+import { db } from '../db';
+import { locationTrackingTable } from '../db/schema';
 import { type CreateLocationTrackingInput, type LocationTracking } from '../schema';
 
 export const trackLocation = async (input: CreateLocationTrackingInput): Promise<LocationTracking> => {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is recording GPS location data from child devices
-  // when GPS and data are active.
-  return Promise.resolve({
-    id: 1,
-    device_id: input.device_id,
-    latitude: input.latitude,
-    longitude: input.longitude,
-    accuracy: input.accuracy || null,
-    address: input.address || null,
-    timestamp: new Date(),
-    created_at: new Date()
-  } as LocationTracking);
+  try {
+    // Insert location tracking record
+    const result = await db.insert(locationTrackingTable)
+      .values({
+        device_id: input.device_id,
+        latitude: input.latitude.toString(), // Convert number to string for decimal column
+        longitude: input.longitude.toString(), // Convert number to string for decimal column
+        accuracy: input.accuracy ? input.accuracy.toString() : null, // Convert number to string for decimal column
+        address: input.address || null,
+        timestamp: new Date() // Use current timestamp for GPS recording
+      })
+      .returning()
+      .execute();
+
+    // Convert decimal fields back to numbers before returning
+    const locationRecord = result[0];
+    return {
+      ...locationRecord,
+      latitude: parseFloat(locationRecord.latitude), // Convert string back to number
+      longitude: parseFloat(locationRecord.longitude), // Convert string back to number
+      accuracy: locationRecord.accuracy ? parseFloat(locationRecord.accuracy) : null // Convert string back to number
+    };
+  } catch (error) {
+    console.error('Location tracking failed:', error);
+    throw error;
+  }
 };

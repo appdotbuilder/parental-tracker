@@ -1,9 +1,19 @@
 
+import { db } from '../db';
+import { devicesTable } from '../db/schema';
 import { type Device } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export const getUserDevices = async (userId: number): Promise<Device[]> => {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching all devices associated with a specific user
-  // from the database.
-  return Promise.resolve([]);
+  try {
+    const results = await db.select()
+      .from(devicesTable)
+      .where(eq(devicesTable.user_id, userId))
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Failed to get user devices:', error);
+    throw error;
+  }
 };
